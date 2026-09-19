@@ -126,29 +126,16 @@ st.markdown("""
         color: #d2a8ff;
         font-weight: bold;
     }
-
-    /* Streamlit Tab Styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-
-    .stTabs [data-baseweb="tab"] {
-        height: 48px;
-        white-space: pre-wrap;
-        background-color: rgba(22, 27, 38, 0.6);
-        border-radius: 10px 10px 0px 0px;
-        color: #8b949e;
-        font-weight: 600;
-        padding: 10px 20px;
-    }
-
-    .stTabs [aria-selected="true"] {
-        background-color: rgba(0, 223, 216, 0.15) !important;
-        color: #00dfd8 !important;
-        border-bottom: 2px solid #00dfd8 !important;
-    }
 </style>
 """, unsafe_allow_html=True)
+
+# ==========================================
+# OPTIMAL STANDARD HYPERPARAMETERS
+# ==========================================
+DEFAULT_LAMBDA = 0.030   # Exponential decay constant
+DEFAULT_EPSILON = 0.48   # Micro-cluster radius for text embeddings
+DEFAULT_MU = 1.80        # Potential cluster weight threshold
+DEFAULT_EPS_MACRO = 0.45 # DBSCAN macro-clustering radius threshold
 
 # ==========================================
 # SESSION STATE INITIALIZATION
@@ -158,10 +145,15 @@ if "embedder" not in st.session_state:
         st.session_state.embedder = TextEmbedder()
 
 if "engine" not in st.session_state:
-    st.session_state.engine = DenStreamEngine(lambda_decay=0.03, epsilon=0.38, mu=2.5, beta=0.3)
-    st.session_state.macro_engine = MacroClusterEngine(eps_macro=0.40)
+    st.session_state.engine = DenStreamEngine(
+        lambda_decay=DEFAULT_LAMBDA,
+        epsilon=DEFAULT_EPSILON,
+        mu=DEFAULT_MU,
+        beta=0.3
+    )
+    st.session_state.macro_engine = MacroClusterEngine(eps_macro=DEFAULT_EPS_MACRO)
     st.session_state.posts_history = []
-    st.session_state.vector_log = []  # List of dicts for 2D/3D scatter plot
+    st.session_state.vector_log = []   # List of dicts for 2D/3D scatter plot
     st.session_state.timeline_log = [] # List of dicts for dynamics line plot
     st.session_state.y_true = []
     st.session_state.y_pred = []
@@ -179,12 +171,31 @@ data_source = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🎛️ DenStream Hyperparameters")
+st.sidebar.markdown("### 🌌 Map Visualization Settings")
+dim_choice = st.sidebar.radio(
+    "PCA Vector Projection Mode:",
+    ["3D PCA Vector Plot", "2D PCA Vector Plot"]
+)
 
-lambda_decay = st.sidebar.slider("Decay Constant (λ)", 0.001, 0.100, 0.030, step=0.005, help="Time-decay penalty weight")
-epsilon = st.sidebar.slider("Micro Radius (ε)", 0.10, 0.60, 0.38, step=0.02, help="Max cosine distance for cluster merging")
-mu = st.sidebar.slider("Potential Threshold (μ)", 1.0, 5.0, 2.5, step=0.5, help="Minimum weight for Potential Micro-Cluster")
-eps_macro = st.sidebar.slider("Macro DBSCAN (ε_macro)", 0.20, 0.60, 0.40, step=0.05, help="Distance radius for grouping micro-clusters into topics")
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🎛️ DenStream Hyperparameters (Optimal Standard)")
+
+lambda_decay = st.sidebar.slider(
+    "Decay Constant (λ)", 0.001, 0.100, DEFAULT_LAMBDA, step=0.005,
+    help="Time-decay penalty weight for older posts"
+)
+epsilon = st.sidebar.slider(
+    "Micro Radius (ε)", 0.10, 0.70, DEFAULT_EPSILON, step=0.02,
+    help="Max cosine distance for cluster merging (Optimal: 0.48 for text embeddings)"
+)
+mu = st.sidebar.slider(
+    "Potential Threshold (μ)", 1.0, 5.0, DEFAULT_MU, step=0.1,
+    help="Minimum weight threshold to form a Potential Micro-Cluster (Optimal: 1.8)"
+)
+eps_macro = st.sidebar.slider(
+    "Macro DBSCAN (ε_macro)", 0.20, 0.60, DEFAULT_EPS_MACRO, step=0.05,
+    help="Distance radius for grouping micro-clusters into macro topics (Optimal: 0.45)"
+)
 stream_speed = st.sidebar.slider("⚡ Stream Speed (Posts/sec)", 1, 20, 5)
 
 st.sidebar.markdown("---")
@@ -215,60 +226,57 @@ if st.sidebar.button("🔄 Reset Engine State", use_container_width=True):
 st.markdown('<div class="header-title">🔥 Real-Time Stream Topic Intelligence System</div>', unsafe_allow_html=True)
 st.markdown('<div class="header-sub">Powered by DenStream Exponential Decay, Macro-DBSCAN Clustering & c-TF-IDF Topic Labeling</div>', unsafe_allow_html=True)
 
-# Top KPI Metric Cards
-kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
-with kpi1:
-    m_processed = st.metric("📡 Total Posts", len(st.session_state.posts_history))
-with kpi2:
-    p_mcs_active = st.session_state.engine.get_potential_clusters()
-    m_pmc = st.metric("🟢 p-MC (Potential)", len(p_mcs_active))
-with kpi3:
-    m_omc = st.metric("🔴 o-MC (Outliers)", len(st.session_state.engine.o_micro_clusters))
-with kpi4:
-    current_topics = st.session_state.macro_engine.generate_topics(p_mcs_active)
-    m_topics = st.metric("🔥 Active Topics", len(current_topics))
-with kpi5:
-    purity_val = "N/A"
-    if len(st.session_state.y_true) > 5:
-        metrics = ClusteringEvaluator.evaluate_benchmark(st.session_state.y_true, st.session_state.y_pred)
-        purity_val = f"{metrics['purity']*100:.1f}%"
-    m_purity = st.metric("🎯 Benchmark Purity", purity_val)
+# Placeholder for Header Metric Cards
+kpi_placeholder = st.empty()
+
+def update_kpis():
+    with kpi_placeholder.container():
+        kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+        with kpi1:
+            st.metric("📡 Total Posts", len(st.session_state.posts_history))
+        with kpi2:
+            p_mcs_active = st.session_state.engine.get_potential_clusters()
+            st.metric("🟢 p-MC (Potential)", len(p_mcs_active))
+        with kpi3:
+            st.metric("🔴 o-MC (Outliers)", len(st.session_state.engine.o_micro_clusters))
+        with kpi4:
+            current_topics = st.session_state.macro_engine.generate_topics(p_mcs_active)
+            st.metric("🔥 Active Topics", len(current_topics))
+        with kpi5:
+            purity_val = "N/A"
+            if len(st.session_state.y_true) > 5:
+                metrics = ClusteringEvaluator.evaluate_benchmark(st.session_state.y_true, st.session_state.y_pred)
+                purity_val = f"{metrics['purity']*100:.1f}%"
+            st.metric("🎯 Benchmark Purity", purity_val)
+
+update_kpis()
 
 st.markdown("---")
 
 # ==========================================
-# DEDICATED MAIN NAVIGATION TABS
+# ACTIVE VIEW SELECTOR (LAZY RENDERING FOR HIGH FPS)
 # ==========================================
-tab_topics, tab_map, tab_dynamics, tab_feed, tab_eval = st.tabs([
-    "🔥 Active & Detected Topics",
-    "🌌 2D/3D Cluster & Vector Map",
-    "📈 Stream Dynamics & Velocity",
-    "📡 Live Feed HUD",
-    "🎯 Benchmark Diagnostics"
-])
+active_view = st.radio(
+    "📺 Active Live View (Chọn mục để xem thời gian thực, chống lag):",
+    [
+        "🔥 Active & Detected Topics",
+        "🌌 2D/3D Cluster & Vector Map",
+        "📈 Stream Dynamics & Velocity",
+        "📡 Live Feed HUD",
+        "🎯 Benchmark Diagnostics"
+    ],
+    horizontal=True,
+    key="active_view_selector_radio"
+)
 
-# Placeholders for Streamlit reactive updates
-with tab_topics:
-    topics_container = st.empty()
-
-with tab_map:
-    map_container = st.empty()
-
-with tab_dynamics:
-    dynamics_container = st.empty()
-
-with tab_feed:
-    feed_container = st.empty()
-
-with tab_eval:
-    eval_container = st.empty()
+main_content_placeholder = st.empty()
 
 # ==========================================
 # HELPER RENDERING FUNCTIONS
 # ==========================================
 def render_topics_tab(topics):
     """Renders dedicated detected topics grid and summary charts."""
-    with topics_container.container():
+    with main_content_placeholder.container():
         if not topics:
             st.info("💡 Accumulating social post stream to form micro-clusters and discover macro topics...")
             return
@@ -336,17 +344,16 @@ def render_topics_tab(topics):
                     st.markdown(f"**{idx}.** *\"{sample}\"*")
 
 
-def render_map_tab(engine, vector_log):
+def render_map_tab(engine, vector_log, projection_choice):
     """Renders high-tech 2D or 3D PCA scatter plot of micro-clusters and post vectors."""
-    with map_container.container():
+    with main_content_placeholder.container():
         st.markdown("### 🌌 2D / 3D Vector Space & Micro-Cluster Visualization")
         
         if not vector_log and not engine.p_micro_clusters:
             st.info("💡 Start streaming posts to visualize clusters in 2D/3D PCA vector space!")
             return
 
-        dim_choice = st.radio("Select Space Projection:", ["3D PCA Vector Plot", "2D PCA Vector Plot"], horizontal=True)
-        n_components = 3 if "3D" in dim_choice else 2
+        n_components = 3 if "3D" in projection_choice else 2
 
         # Gather data points: Post vectors + Micro-cluster centers
         plot_rows = []
@@ -428,7 +435,7 @@ def render_map_tab(engine, vector_log):
 
 def render_dynamics_tab(timeline_log):
     """Renders real-time stream dynamics and micro-cluster trajectory charts."""
-    with dynamics_container.container():
+    with main_content_placeholder.container():
         st.markdown("### 📈 Real-Time Stream Trajectory & Cluster Dynamics")
         
         if not timeline_log:
@@ -462,7 +469,7 @@ def render_dynamics_tab(timeline_log):
 
 def render_feed_tab(posts_history):
     """Renders real-time social media post feed table."""
-    with feed_container.container():
+    with main_content_placeholder.container():
         st.markdown("### 📡 Real-Time Social Stream Feed HUD")
         if not posts_history:
             st.info("💡 No posts processed yet. Click 'Start Stream' in sidebar!")
@@ -479,13 +486,13 @@ def render_feed_tab(posts_history):
                 "Text": st.column_config.TextColumn("Cleaned Post Content", width="large")
             },
             use_container_width=True,
-            height=450
+            height=480
         )
 
 
 def render_eval_tab(y_true, y_pred):
     """Renders benchmark purity & evaluation breakdown."""
-    with eval_container.container():
+    with main_content_placeholder.container():
         st.markdown("### 🎯 Benchmark Evaluation & Purity Diagnostics")
         if len(y_true) <= 5:
             st.info("💡 Process at least 5 posts to compute benchmark purity metrics.")
@@ -507,14 +514,25 @@ def render_eval_tab(y_true, y_pred):
         st.dataframe(df_eval.tail(25), use_container_width=True)
 
 
-# Render static initial state
-p_mcs_active = st.session_state.engine.get_potential_clusters()
-initial_topics = st.session_state.macro_engine.generate_topics(p_mcs_active)
-render_topics_tab(initial_topics)
-render_map_tab(st.session_state.engine, st.session_state.vector_log)
-render_dynamics_tab(st.session_state.timeline_log)
-render_feed_tab(st.session_state.posts_history)
-render_eval_tab(st.session_state.y_true, st.session_state.y_pred)
+def render_selected_view(view_name):
+    """Lazy-renders ONLY the active view selected by user for maximum streaming performance."""
+    p_mcs = st.session_state.engine.get_potential_clusters()
+    topics = st.session_state.macro_engine.generate_topics(p_mcs)
+
+    if "Topics" in view_name:
+        render_topics_tab(topics)
+    elif "Map" in view_name:
+        render_map_tab(st.session_state.engine, st.session_state.vector_log, dim_choice)
+    elif "Dynamics" in view_name:
+        render_dynamics_tab(st.session_state.timeline_log)
+    elif "Feed" in view_name:
+        render_feed_tab(st.session_state.posts_history)
+    elif "Evaluation" in view_name or "Diagnostics" in view_name:
+        render_eval_tab(st.session_state.y_true, st.session_state.y_pred)
+
+# Initial static render when not running stream loop
+if not st.session_state.is_running:
+    render_selected_view(active_view)
 
 # ==========================================
 # STREAMING SIMULATION LOOP
@@ -588,12 +606,11 @@ if st.session_state.is_running:
             "MaxBurstScore": max_burst
         })
 
-        # Re-render Active Components
-        render_topics_tab(topics)
-        render_map_tab(engine, st.session_state.vector_log)
-        render_dynamics_tab(st.session_state.timeline_log)
-        render_feed_tab(st.session_state.posts_history)
-        render_eval_tab(st.session_state.y_true, st.session_state.y_pred)
+        # Update Top KPI Stats
+        update_kpis()
+
+        # LAZY-RENDER ONLY THE CURRENTLY SELECTED ACTIVE VIEW (SUPER FAST & NO LAG)
+        render_selected_view(active_view)
 
         time.sleep(1.0 / stream_speed)
 
