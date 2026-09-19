@@ -41,3 +41,21 @@ class ClusteringEvaluator:
             "nmi": round(nmi, 4),
             "ari": round(ari, 4)
         }
+
+    @staticmethod
+    def compare_models(baseline_metrics: Dict[str, float], proposed_metrics: Dict[str, float]) -> Dict[str, Dict[str, Any]]:
+        """Compares Baseline (DenStream) vs Proposed (SADStream) and computes relative improvements."""
+        res = {}
+        for metric in ["purity", "nmi", "ari"]:
+            base_v = baseline_metrics.get(metric, 0.0)
+            prop_v = proposed_metrics.get(metric, 0.0)
+            diff = prop_v - base_v
+            pct = (diff / base_v * 100.0) if base_v > 1e-6 else (100.0 if prop_v > 0 else 0.0)
+            res[metric] = {
+                "baseline": base_v,
+                "proposed": prop_v,
+                "diff": round(diff, 4),
+                "pct_change": round(pct, 2)
+            }
+        return res
+

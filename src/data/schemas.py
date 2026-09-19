@@ -32,3 +32,5 @@ class TrendingTopic(BaseModel):
     micro_cluster_count: int
     last_updated: float
     is_bursting: bool = False
+    burst_score: float = 0.0
+

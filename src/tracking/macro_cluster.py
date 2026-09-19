@@ -41,9 +41,21 @@ class MacroClusterEngine:
             # Aggregate texts & weights
             sample_texts = []
             total_weight = 0.0
+            n_posts = 0
+            burstiness_list = []
             for mc in mcs:
                 total_weight += mc.weight
+                n_posts += getattr(mc, 'n_posts', int(mc.weight))
                 sample_texts.extend(mc.sample_texts)
+                if hasattr(mc, 'get_burstiness'):
+                    burstiness_list.append(mc.get_burstiness(time.time()))
+
+            avg_burstiness = max(0.0, float(np.mean(burstiness_list))) if burstiness_list else 0.0
+
+            # Calculate SADStream Burst Score: Score_k = w1*B_k + w2*N_k + w3*D_k + w4*U_k
+            # w1=0.4 (burstiness), w2=0.3 (novelty/n_posts), w3=0.2 (density/weight), w4=0.1 (sample diversity)
+            diversity = len(set(sample_texts)) / max(1, len(sample_texts))
+            burst_score = 0.4 * avg_burstiness + 0.3 * (n_posts / 10.0) + 0.2 * total_weight + 0.1 * diversity
 
             # Generate keyword summary using c-TF-IDF
             keywords, topic_name = self.labeler.extract_keywords_and_label(
@@ -61,10 +73,12 @@ class MacroClusterEngine:
                     total_weight=round(total_weight, 2),
                     micro_cluster_count=len(mcs),
                     last_updated=time.time(),
-                    is_bursting=(total_weight > 5.0)
+                    is_bursting=(burst_score > 2.0 or total_weight > 4.0),
+                    burst_score=round(burst_score, 3)
                 )
             )
 
-        # Sort topics by weight descending
-        topics.sort(key=lambda t: t.total_weight, reverse=True)
+        # Sort topics by burst score descending
+        topics.sort(key=lambda t: t.burst_score, reverse=True)
         return topics
+
