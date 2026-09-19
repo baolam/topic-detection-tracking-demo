@@ -10,25 +10,25 @@ from src.tracking.macro_cluster import MacroClusterEngine
 from src.evaluation.evaluator import ClusteringEvaluator
 
 st.set_page_config(
-    page_title="Dynamic Topic Detection & Tracking System",
+    page_title="Real-Time Topic Detection & Tracking System",
     page_icon="🔥",
     layout="wide"
 )
 
-st.title("🔥 Hệ Thống Phát Hiện & Theo Dõi Chủ Đề Động Trực Tuyến")
-st.caption("Ứng dụng thuật toán DenStream với Cơ chế Lãng quên trên Luồng Mạng Xã Hội | Hỗ trợ Benchmark QCRI/CrisisBench")
+st.title("🔥 Real-Time Stream Topic Detection & Tracking System")
+st.caption("Powered by DenStream with Exponential Time-Decay & c-TF-IDF Topic Labeling | Benchmark: QCRI/CrisisBench Dataset")
 
 # Sidebar Controls
-st.sidebar.header("⚙️ Nguồn Dữ Liệu & Tham Số Stream")
+st.sidebar.header("⚙️ Data Source & Parameters")
 data_source = st.sidebar.radio(
-    "Chọn Nguồn Dữ Liệu Stream:",
-    ["Synthetic Social Media Stream (Mô phỏng)", "QCRI/CrisisBench-english (HuggingFace Disaster Data)"]
+    "Select Data Stream Source:",
+    ["QCRI/CrisisBench (Local Downloaded Dataset)", "Synthetic Social Media Stream (Simulation)"]
 )
 
-lambda_decay = st.sidebar.slider("Hằng số suy giảm (Lambda λ)", 0.001, 0.1, 0.03, step=0.005, help="Tốc độ suy giảm trọng số bài đăng cũ")
-epsilon = st.sidebar.slider("Bán kính cụm Micro (Epsilon ε)", 0.1, 0.6, 0.38, step=0.02, help="Bán kính tương đồng Cosine")
-mu = st.sidebar.slider("Ngưỡng cụm tiềm năng (Mu μ)", 1.0, 5.0, 2.5, step=0.5)
-stream_speed = st.sidebar.slider("Tốc độ phát luồng (Bài/giây)", 1, 20, 5)
+lambda_decay = st.sidebar.slider("Decay Constant (Lambda λ)", 0.001, 0.1, 0.03, step=0.005, help="Time-decay weight penalty for older posts")
+epsilon = st.sidebar.slider("Micro Cluster Radius (Epsilon ε)", 0.1, 0.6, 0.38, step=0.02, help="Cosine similarity radius")
+mu = st.sidebar.slider("Potential Cluster Threshold (Mu μ)", 1.0, 5.0, 2.5, step=0.5)
+stream_speed = st.sidebar.slider("Stream Speed (Posts/sec)", 1, 20, 5)
 
 # Session State Initialization
 if "engine" not in st.session_state:
@@ -47,25 +47,25 @@ if "engine" not in st.session_state:
 col1, col2 = st.columns([3, 2])
 
 with col1:
-    st.subheader("📡 Social Media Live Feed")
+    st.subheader("📡 Social Media Live Stream Feed")
     feed_placeholder = st.empty()
 
 with col2:
-    st.subheader("🔴 Trending Topics & Breaking Events")
+    st.subheader("🔴 Discovered Topics & Breaking Events")
     topic_placeholder = st.empty()
 
 # Dashboard Metrics Placeholder
 metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
 with metric_col1:
-    m_processed = st.metric("Tổng bài đăng", 0)
+    m_processed = st.metric("Total Processed Posts", 0)
 with metric_col2:
-    m_pmc = st.metric("Cụm tiềm năng (p-MC)", 0)
+    m_pmc = st.metric("Potential Clusters (p-MC)", 0)
 with metric_col3:
-    m_omc = st.metric("Cụm nhiễu (o-MC)", 0)
+    m_omc = st.metric("Outlier Clusters (o-MC)", 0)
 with metric_col4:
     m_purity = st.metric("Benchmark Purity", "N/A")
 
-run_button = st.button("▶️ Chạy Mô Phỏng Luồng Thời Gian Thực")
+run_button = st.button("▶️ Start Streaming Real-Time Simulation")
 
 if run_button:
     engine = st.session_state.engine
@@ -78,8 +78,8 @@ if run_button:
     engine.mu = mu
 
     # Select Stream Generator
-    if "HuggingFace" in data_source:
-        loader = CrisisBenchLoader(split="test", max_samples=60)
+    if "CrisisBench" in data_source:
+        loader = CrisisBenchLoader(split="test", max_samples=80)
         stream_iter = loader.stream_posts(delay_sec=1.0 / stream_speed)
     else:
         generator = SocialStreamGenerator(arrival_rate=stream_speed)
@@ -119,13 +119,13 @@ if run_button:
 
         with topic_placeholder.container():
             if not topics:
-                st.info("Đang tích lũy luồng bài đăng để hình thành cụm chủ đề...")
+                st.info("Accumulating post stream to form micro-clusters...")
             for t in topics:
                 st.markdown(f"### 📌 [{t.topic_id}] {t.label}")
                 st.progress(min(t.total_weight / 10.0, 1.0))
-                st.write(f"**Trọng số (Weight):** `{t.total_weight:.2f}` | **Từ khóa:** `{', '.join(t.keywords)}`")
+                st.write(f"**Weight:** `{t.total_weight:.2f}` | **c-TF-IDF Keywords:** `{', '.join(t.keywords)}`")
                 if t.sample_posts:
-                    st.caption(f"Trích dẫn bài đăng: \"{t.sample_posts[0]}\"")
+                    st.caption(f"Sample Post: \"{t.sample_posts[0]}\"")
                 st.divider()
 
         # Update Metrics
@@ -134,7 +134,7 @@ if run_button:
             metrics = ClusteringEvaluator.evaluate_benchmark(st.session_state.y_true, st.session_state.y_pred)
             purity_val = f"{metrics['purity']:.4f}"
 
-        m_processed.metric("Tổng bài đăng", engine.total_processed)
-        m_pmc.metric("Cụm tiềm năng (p-MC)", len(p_mcs))
-        m_omc.metric("Cụm nhiễu (o-MC)", len(engine.o_micro_clusters))
+        m_processed.metric("Total Processed Posts", engine.total_processed)
+        m_pmc.metric("Potential Clusters (p-MC)", len(p_mcs))
+        m_omc.metric("Outlier Clusters (o-MC)", len(engine.o_micro_clusters))
         m_purity.metric("Benchmark Purity", purity_val)

@@ -12,9 +12,30 @@ class CrisisBenchLoader:
         self._load_hf_dataset()
 
     def _load_hf_dataset(self):
+        import os, json
+        local_path = "data/crisisbench.jsonl"
+        
+        if os.path.exists(local_path):
+            print(f"[CrisisBench] Loading local downloaded dataset from '{local_path}' (split='{self.split}')...")
+            records = []
+            with open(local_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    item = json.loads(line)
+                    if self.split and item.get("split") and item.get("split") != self.split:
+                        continue
+                    records.append(item)
+            
+            if self.max_samples and len(records) > self.max_samples:
+                records = records[:self.max_samples]
+            self.dataset = records
+            print(f"[CrisisBench] Successfully loaded {len(self.dataset)} crisis posts from local dataset.")
+            return
+
         try:
             from datasets import load_dataset
-            print(f"[CrisisBench] Loading QCRI/CrisisBench-english ('humanitarian' subset, split='{self.split}')...")
+            print(f"[CrisisBench] Local file not found. Loading QCRI/CrisisBench-english ('humanitarian' subset, split='{self.split}')...")
             full_ds = load_dataset("QCRI/CrisisBench-english", "humanitarian")
             
             # Fallback to train/test split
@@ -29,7 +50,7 @@ class CrisisBenchLoader:
 
             print(f"[CrisisBench] Successfully loaded {len(self.dataset)} crisis posts from HuggingFace.")
         except Exception as e:
-            print(f"[CrisisBench ERROR] Failed to load dataset from HuggingFace: {e}")
+            print(f"[CrisisBench ERROR] Failed to load dataset: {e}")
             self.dataset = None
 
     def stream_posts(self, delay_sec: float = 0.05) -> Generator[SocialPost, None, None]:

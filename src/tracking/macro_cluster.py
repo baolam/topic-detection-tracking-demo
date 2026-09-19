@@ -28,8 +28,10 @@ class MacroClusterEngine:
 
         # Group micro-clusters by macro-label
         grouped: dict[int, list[MicroCluster]] = {}
+        all_background_texts = []
         for label, mc in zip(cluster_labels, p_micro_clusters):
             grouped.setdefault(label, []).append(mc)
+            all_background_texts.extend(mc.sample_texts)
 
         topics: List[TrendingTopic] = []
         for idx, (label, mcs) in enumerate(grouped.items()):
@@ -43,8 +45,11 @@ class MacroClusterEngine:
                 total_weight += mc.weight
                 sample_texts.extend(mc.sample_texts)
 
-            # Generate keyword summary
-            keywords, topic_name = self.labeler.extract_keywords_and_label(sample_texts)
+            # Generate keyword summary using c-TF-IDF
+            keywords, topic_name = self.labeler.extract_keywords_and_label(
+                sample_texts,
+                all_background_texts=all_background_texts
+            )
 
             topic_id = f"TOPIC-{idx+1:02d}"
             topics.append(
