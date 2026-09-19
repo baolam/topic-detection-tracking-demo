@@ -12,10 +12,10 @@ def test_time_decay_math():
     assert mc.weight == 1.0
 
     # Simulate 10 seconds decay with lambda = 0.1
-    # Decay factor = 2^(-0.1 * 10) = 2^(-1) = 0.5
+    # Decay factor = e^(-0.1 * 10) = e^(-1) ≈ 0.367879
     t1 = t0 + 10.0
     mc.decay(t1, lambda_decay=0.1)
-    assert abs(mc.weight - 0.5) < 1e-4
+    assert abs(mc.weight - np.exp(-1.0)) < 1e-4
 
 def test_denstream_outlier_promotion():
     """Verify outlier micro-clusters evolve into potential micro-clusters when burst occurs."""
