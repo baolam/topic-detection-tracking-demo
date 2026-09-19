@@ -1,0 +1,22 @@
+# Dynamic Topic Detection & Tracking Configuration
+
+stream:
+  arrival_rate: 3.0            # Dynamic posts per second
+  burst_probability: 0.15      # Chance of topic burst occurrence
+  random_noise_ratio: 0.25     # Ratio of random unclustered posts
+
+embedding:
+  model_name: "all-MiniLM-L6-v2"
+  vector_dim: 384
+  use_mock_fallback: true      # Fallback to fast TF-IDF / Random Hash if PyTorch/HuggingFace not loaded fast
+
+denstream:
+  lambda_decay: 0.03           # Exponential time-decay constant
+  epsilon: 0.38                # Micro-cluster radius threshold (1 - cosine_similarity)
+  mu: 2.5                      # Core micro-cluster weight threshold
+  beta: 0.3                    # Outlier vs Potential micro-cluster factor (beta * mu)
+  pruning_period: 5            # Eviction check period in seconds
+
+macro_clustering:
+  min_samples: 2               # DBSCAN min_samples for macro-clusters
+  eps_macro: 0.40              # DBSCAN epsilon for macro-clusters
