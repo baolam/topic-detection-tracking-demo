@@ -8,7 +8,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 from src.data.crisisbench_loader import CrisisBenchLoader
 from src.data.preprocessor import TextPreprocessor
 from src.embeddings.embedder import TextEmbedder
-from src.engine.denstream import DenStreamEngine
+from src.engine.sadstream_engine import SADStreamEngine
 from src.tracking.macro_cluster import MacroClusterEngine
 from src.utils.logger import setup_logger
 
@@ -24,17 +24,23 @@ def main():
     logger.info("Starting Dynamic Topic Detection & Tracking System...")
 
     config = load_config()
-    den_cfg = config.get("denstream", {})
+    sad_cfg = config.get("sadstream", {})
     macro_cfg = config.get("macro_clustering", {})
 
     # 1. Initialize Components
     embedder = TextEmbedder()
-    engine = DenStreamEngine(
-        lambda_decay=den_cfg.get("lambda_decay", 0.03),
-        epsilon=den_cfg.get("epsilon", 0.38),
-        mu=den_cfg.get("mu", 2.5),
-        beta=den_cfg.get("beta", 0.3),
-        pruning_period=den_cfg.get("pruning_period", 5.0)
+    engine = SADStreamEngine(
+        lambda_0=sad_cfg.get("lambda_0", 0.03),
+        eta=sad_cfg.get("eta", 0.5),
+        rho=sad_cfg.get("rho", 0.5),
+        epsilon=sad_cfg.get("epsilon", 0.65),
+        mu=sad_cfg.get("mu", 1.5),
+        beta=sad_cfg.get("beta", 0.2),
+        theta_R=sad_cfg.get("theta_R", 0.55),
+        alpha=sad_cfg.get("alpha", 0.7),
+        beta_lex=sad_cfg.get("beta_lex", 0.1),
+        gamma_ent=sad_cfg.get("gamma_ent", 0.1),
+        delta_hash=sad_cfg.get("delta_hash", 0.1)
     )
     macro_engine = MacroClusterEngine(
         eps_macro=macro_cfg.get("eps_macro", 0.40),

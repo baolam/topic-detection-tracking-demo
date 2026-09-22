@@ -133,7 +133,8 @@ class SADStreamEngine:
         new_o_mc.keywords.update(words)
         new_o_mc.entities.update(entities)
         new_o_mc.hashtags.update(hashtags)
-        new_o_mc.sample_texts.append(post.text)
+        if post.text not in new_o_mc.sample_texts:
+            new_o_mc.sample_texts.append(post.text)
         self.o_micro_clusters.append(new_o_mc)
 
         self._check_prune(curr_time)

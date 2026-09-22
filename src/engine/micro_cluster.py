@@ -115,9 +115,10 @@ class MicroCluster:
             self.arrival_timestamps.pop(0)
 
         if text:
-            self.sample_texts.append(text)
-            if len(self.sample_texts) > 10:
-                self.sample_texts.pop(0)
+            if text not in self.sample_texts:
+                self.sample_texts.append(text)
+                if len(self.sample_texts) > 10:
+                    self.sample_texts.pop(0)
 
     def get_center(self) -> np.ndarray:
         """Calculates the weighted centroid vector."""

@@ -1,6 +1,6 @@
-# Dynamic Topic Detection and Tracking System (Demo)
+# Dynamic Topic Detection and Tracking System (SADStream Demo)
 
-Hệ thống Phát hiện và Theo dõi Chủ đề Động trên Luồng Dữ liệu Mạng Xã hội áp dụng thuật toán **DenStream** tích hợp **Cơ chế Lãng quên (Exponential Time-Decay)** và **Real-Time Text Embeddings**.
+Hệ thống Phát hiện và Theo dõi Chủ đề Động trên Luồng Dữ liệu Mạng Xã hội áp dụng thuật toán đề xuất **SADStream (Adaptive Semantic Stream Clustering)** tích hợp **Tốc độ Suy giảm Thích ứng ($\lambda_k(t)$)**, **Bộ nhớ Cụm Nén Dài hạn (Compressed Prototype Memory)** và **Độ tương đồng Hỗn hợp (Hybrid Similarity)**.
 
 ---
 
@@ -9,18 +9,21 @@ Hệ thống Phát hiện và Theo dõi Chủ đề Động trên Luồng Dữ l
 ```
 topic-detection-tracking/
 ├── .venv/                      # Môi trường ảo Python riêng biệt
-├── config/                     # Cấu hình tham số (Lambda, Epsilon, Mu)
+├── config/                     # Cấu hình tham số (Lambda, Epsilon, Mu, Hybrid Weights)
 │   └── config.yaml             
 ├── src/                        # Mã nguồn chính
-│   ├── data/                   # Data Schema & Real-time Stream Simulator
-│   ├── embeddings/             # Real-time Dense Vector Embedder (MiniLM / Hash)
-│   ├── engine/                 # Động cơ DenStream + Time-Decay + Eviction Policy
-│   ├── tracking/               # Macro-Clustering (DBSCAN) & Topic Labeler
-│   └── utils/                  # Logger utilities
-├── tests/                      # Unit tests cho Time-decay toán học
-│   └── test_denstream.py       
+│   ├── data/                   # Data Schema & Real-time Stream Simulator (CrisisBench / Synthetic)
+│   ├── embeddings/             # Real-time Dense Vector Embedder (all-MiniLM-L6-v2)
+│   ├── engine/                 # SADStream Engine (Adaptive Decay + Memory Archive) & DenStream Baseline
+│   ├── tracking/               # Macro-Clustering (DBSCAN) & Topic Labeler (c-TF-IDF)
+│   ├── evaluation/             # Evaluator & Purity Metrics (NMI, ARI, Purity)
+│   └── ui/                     # Streamlit Dashboard UI (Components, Styles)
+├── tests/                      # Unit tests kiểm thử thuật toán
+│   ├── test_denstream.py       
+│   └── test_sadstream.py       # Kiểm thử SADStream Adaptive Decay & Memory Archive
 ├── main.py                     # CLI Runner chạy demo trực tiếp trên Terminal
-├── app.py                      # Interactive Streamlit Dashboard
+├── eval.py                     # Script Đánh giá So sánh Benchmark (SADStream vs DenStream)
+├── app.py                      # Interactive Streamlit Web Dashboard
 └── requirements.txt            # Danh sách gói thư viện
 ```
 
@@ -46,12 +49,12 @@ Môi trường ảo đã được tạo sẵn tại thư mục `.venv`:
 
 ### 3. Chạy Kiểm Thử Đơn Vị (Unit Tests)
 ```powershell
-.\.venv\Scripts\python.exe tests/test_denstream.py
+.\.venv\Scripts\python.exe -m pytest
 ```
 
-### 4. Chạy Demo trên Terminal (CLI Runner)
+### 4. Chạy Benchmark So Sánh (Evaluator)
 ```powershell
-.\.venv\Scripts\python.exe main.py
+.\.venv\Scripts\python.exe eval.py
 ```
 
 ### 5. Khởi Chạy Giao Diện Web Dashboard (Streamlit UI)
@@ -61,7 +64,9 @@ Môi trường ảo đã được tạo sẵn tại thư mục `.venv`:
 
 ---
 
-## 🔬 Góc Nhìn Dữ Liệu (Data Perspective)
-1. **Input Schema**: `SocialPost` chứa `post_id`, `timestamp`, `text`, `author_id`, `hashtags`.
-2. **Exponential Decay Math**: Trọng số $w(t) = 2^{-\lambda (t - t_0)}$. Sau khoảng $T_{half-life} = \frac{1}{\lambda}$, bài đăng giảm 50% độ nóng.
-3. **Density-based Outlier Promotion**: Outlier Micro-Cluster ($o$-MC) khi có đợt bài đăng bùng nổ sẽ tích lũy trọng số vượt ngưỡng $\beta \cdot \mu$ và biến thành cụm tiềm năng ($p$-MC) đại diện cho **Breaking Event**.
+## 🔬 Thuật Toán SADStream (SADStream Algorithm Features)
+1. **Adaptive Decay Rate ($\lambda_k(t)$)**: Tự động điều chỉnh tốc độ suy giảm thời gian dựa trên độ bùng nổ ($B_k$) và mức độ hoạt động ($A_k$) của từng cụm topic. Các chủ đề đang bùng nổ sẽ được duy trì độ nóng lâu hơn.
+2. **Compressed Prototype Memory ($L_k$)**: Tự động nén và lưu trữ các cụm bị loại bỏ vào kho lưu trữ bộ nhớ dài hạn, cho phép phục hồi chủ đề lặp lại (Recurring Topics) khi có bài đăng mới tương đồng.
+3. **Hybrid Text-Feature Similarity**: Kết hợp độ tương đồng Semantic Cosine ($S_{sem}$), Lexical Jaccard ($S_{lex}$), Entity Jaccard ($S_{ent}$) và Hashtag Jaccard ($S_{hash}$).
+4. **Interactive Web Demo Control**: Giao diện Dashboard Web (`app.py`) cho phép tùy chỉnh trực tiếp bộ tham số SADStream, xem trực quan hóa 2D/3D PCA vector space kèm các cụm bộ nhớ nén (Compressed Memory Prototypes).
+

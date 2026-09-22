@@ -10,11 +10,24 @@ embedding:
   vector_dim: 384
   use_mock_fallback: true      # Fallback to fast TF-IDF / Random Hash if PyTorch/HuggingFace not loaded fast
 
+sadstream:
+  lambda_0: 0.03               # Base decay constant (eval optimal)
+  eta: 0.5                     # Burstiness decay weight
+  rho: 0.5                     # Activity decay weight
+  epsilon: 0.65                # Micro-cluster distance threshold (eval optimal)
+  mu: 1.5                      # Core micro-cluster weight threshold (eval optimal)
+  beta: 0.2                    # Outlier vs Potential factor (eval optimal)
+  theta_R: 0.55                # Recurring topic recovery similarity threshold
+  alpha: 0.7                   # Semantic similarity weight
+  beta_lex: 0.1                # Lexical similarity weight
+  gamma_ent: 0.1               # Entity similarity weight
+  delta_hash: 0.1              # Hashtag similarity weight
+
 denstream:
   lambda_decay: 0.03           # Exponential time-decay constant
-  epsilon: 0.38                # Micro-cluster radius threshold (1 - cosine_similarity)
-  mu: 2.5                      # Core micro-cluster weight threshold
-  beta: 0.3                    # Outlier vs Potential micro-cluster factor (beta * mu)
+  epsilon: 0.65                # Micro-cluster radius threshold (1 - cosine_similarity)
+  mu: 1.5                      # Core micro-cluster weight threshold
+  beta: 0.2                    # Outlier vs Potential micro-cluster factor (beta * mu)
   pruning_period: 5            # Eviction check period in seconds
 
 macro_clustering:

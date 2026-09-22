@@ -57,6 +57,9 @@ class MacroClusterEngine:
             diversity = len(set(sample_texts)) / max(1, len(sample_texts))
             burst_score = 0.4 * avg_burstiness + 0.3 * (n_posts / 10.0) + 0.2 * total_weight + 0.1 * diversity
 
+            # Deduplicate sample texts while preserving order
+            unique_samples = list(dict.fromkeys(sample_texts))
+
             # Generate keyword summary using c-TF-IDF
             keywords, topic_name = self.labeler.extract_keywords_and_label(
                 sample_texts,
@@ -69,7 +72,7 @@ class MacroClusterEngine:
                     topic_id=topic_id,
                     label=topic_name,
                     keywords=keywords,
-                    sample_posts=sample_texts[:3],
+                    sample_posts=unique_samples[:3],
                     total_weight=round(total_weight, 2),
                     micro_cluster_count=len(mcs),
                     last_updated=time.time(),

@@ -54,7 +54,8 @@ class DenStreamEngine:
 
         # Step 3: Create a new Outlier Micro-Cluster (o-MC)
         new_o_mc = MicroCluster(vector, curr_time)
-        new_o_mc.sample_texts.append(post.text)
+        if post.text not in new_o_mc.sample_texts:
+            new_o_mc.sample_texts.append(post.text)
         self.o_micro_clusters.append(new_o_mc)
 
         self._check_prune(curr_time)
